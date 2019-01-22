@@ -41,6 +41,7 @@ class ContactController extends Controller
     {
         $request->validate();
         $contact = Contact::create($request->validated());
+
         return response()->json($contact, 201);
     }
 
@@ -61,13 +62,14 @@ class ContactController extends Controller
      *
      * @param SaveContactRequest $request
      * @param  \App\Contact $contact
-     * @return Contact
+     * @return \Illuminate\Http\Response
      */
     public function update(SaveContactRequest $request, Contact $contact)
     {
         $request->validate();
         $contact->update($request->validated());
-        response()->json($contact, 200);
+
+        return response()->json($contact, 200);
     }
 
     /**
@@ -80,6 +82,7 @@ class ContactController extends Controller
     public function destroy(Contact $contact)
     {
         $contact->delete();
+
         return response()->json(null, 204);
     }
 }

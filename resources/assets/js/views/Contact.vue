@@ -9,40 +9,9 @@
                 <div class="col">
                     <div class="card border-top-2">
                         <div class="card-body">
-                            <div class="form-group">
-                                <label for="email">Email Address*</label>
-                                <input type="email"
-                                       :class="{'form-control': true, 'is-invalid': this.errors && this.errors.errors.email}"
-                                       id="email"
-                                       name="email"
-                                       aria-describedby="emailHelp"
-                                       v-model="contact.email">
-                                <div v-if="this.errors && this.errors.errors.email" class="invalid-feedback">
-                                    <span class="block" v-for="err in errors.errors.email">{{err}}</span>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="first_name">First Name*</label>
-                                <input type="text"
-                                       :class="{'form-control': true, 'is-invalid': this.errors && this.errors.errors.first_name}"
-                                       id="first_name"
-                                       name="first_name"
-                                       v-model="contact.first_name">
-                                <div v-if="this.errors && this.errors.errors.first_name" class="invalid-feedback">
-                                    <span class="block" v-for="err in errors.errors.first_name">{{err}}</span>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="last_name">Last Name*</label>
-                                <input type="text"
-                                       :class="{'form-control': true, 'is-invalid': this.errors && this.errors.errors.last_name}"
-                                       id="last_name"
-                                       name="last_name"
-                                       v-model="contact.last_name">
-                                <div v-if="this.errors && this.errors.errors.last_name" class="invalid-feedback">
-                                    <span class="block" v-for="err in errors.errors.last_name">{{err}}</span>
-                                </div>
-                            </div>
+                            <base-input id="email" label="Email Address*" v-model="contact.email" :errors="getErrors('email')"></base-input>
+                            <base-input id="first_name" label="First Name*" v-model="contact.first_name" :errors="getErrors('first_name')"></base-input>
+                            <base-input id="last_name" label="Last Name*" v-model="contact.last_name" :errors="getErrors('last_name')"></base-input>
                             <div class="form-group">
                                 <label>Birth Date</label>
                                 <datepicker input-class="form-control bg-white" calendar-button-icon="far fa-calendar" :bootstrap-styling="true"
@@ -53,31 +22,9 @@
                                     </div>
                                 </datepicker>
                             </div>
-                            <div class="form-group">
-                                <label for="city">City</label>
-                                <input type="text" class="form-control"
-                                       id="city"
-                                       name="city"
-                                       v-model="contact.city">
-                            </div>
-                            <div class="form-group">
-                                <label for="phone">Phone Number*</label>
-                                <input type="text"
-                                       :class="{'form-control': true, 'is-invalid': this.errors && this.errors.errors.phone}"
-                                       id="phone"
-                                       name="phone"
-                                       v-model="contact.phone">
-                                <div v-if="this.errors && this.errors.errors.phone" class="invalid-feedback">
-                                    <span class="block" v-for="err in errors.errors.phone">{{err}}</span>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="function">Function</label>
-                                <input type="text" class="form-control"
-                                       id="function"
-                                       name="function"
-                                       v-model="contact.function">
-                            </div>
+                            <base-input id="city" label="City" v-model="contact.city" :errors="getErrors('city')"></base-input>
+                            <base-input id="phone" label="Phone Number*" v-model="contact.phone" :errors="getErrors('phone')"></base-input>
+                            <base-input id="function" label="Function" v-model="contact.function" :errors="getErrors('function')"></base-input>
                             <p>
                                 * Required Fields
                             </p>
@@ -93,20 +40,8 @@
                     <div class="card">
                         <div class="card-body">
                             <h5 class="card-title mb-4 app-company-title">Company</h5>
-                            <div class="form-group">
-                                <label for="company_name">Name</label>
-                                <input type="text" class="form-control"
-                                       id="company_name"
-                                       name="company_name"
-                                       v-model="contact.company_name">
-                            </div>
-                            <div class="form-group">
-                                <label for="company_address">Address</label>
-                                <input type="text" class="form-control"
-                                       id="company_address"
-                                       name="company_address"
-                                       v-model="contact.company_address">
-                            </div>
+                            <base-input id="company_name" label="Name" v-model="contact.company_name" :errors="getErrors('company_name')"></base-input>
+                            <base-input id="company_address" label="Address" v-model="contact.company_address" :errors="getErrors('company_address')"></base-input>
                         </div>
                         <div class="card-footer pb-5">
                         </div>
@@ -124,14 +59,16 @@
     import Datepicker from "vuejs-datepicker";
     import * as moment from 'moment';
     import {capitlize} from "../utils/string-capitalizer";
+    import BaseInput from "../components/BaseInput";
 
     export default {
         name: 'Contact',
         props: ['mode'],
-        components: {BaseFormSubmit, Datepicker},
+        components: {BaseFormSubmit, Datepicker, BaseInput},
         data() {
             return {
                 contact: {},
+                state: 'pendingAction', // either: 'pendingAction', 'actionInProgress', 'success', 'error'
                 errors: null
             }
         },
@@ -239,6 +176,10 @@
             },
             formatBirthDate(date) {
                 return moment(date).format("YYYY-MM-DD").toString();
+            },
+            // Helpers
+            getErrors(field) {
+                return this.errors && this.errors.errors[field] ? this.errors.errors[field] : null
             }
         }
     }

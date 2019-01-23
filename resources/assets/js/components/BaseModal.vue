@@ -10,10 +10,10 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <div v-if="state !== 'error'" class=" alert alert-warning">{{body}}</div>
+                    <div v-if="state !== 'error'" class="alert alert-warning">{{body}}</div>
                     <div v-else class="alert alert-danger" role="alert">
-                        <h4 class="alert-heading">Unexpected Error :(</h4>
-                        <p>{{errorMsg}}</p>
+                        <h4 class="alert-heading">{{errorTitle}}</h4>
+                        <p>{{errorMessage}}</p>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -40,30 +40,67 @@
 </template>
 
 <script>
+    import {EventBus} from "../utils/event-bus";
+
     export default {
         name: "BaseModal",
-        props: {
-            id: String,
-            title: String,
-            body: String,
-            contentId: Number,
-            actionInProgressLabel: String,
-            state: {
-                type: String,
-                default: 'pendingAction',
-                validator: function (value) {
-                    // The value must match one of these strings
-                    return ['pendingAction', 'actionInProgress', 'error', 'success'].indexOf(value) !== -1
+        data() {
+            return {
+                id: 'app-modal',
+                title: null,
+                body: null,
+                contentId: null,
+                actionInProgressLabel: null,
+                errorTitle: 'Something went wrong :(',
+                errorMessage: 'Oops, an unexpected error occurred :( Please try a next time.',
+                state: 'pendingAction', // Accept: 'pendingAction', 'actionInProgress', 'error', 'success',
+                visible: false,
+            }
+        },
+        computed: {
+          element() {
+              return $(`#${this.id}`);
+          }
+        },
+        mounted() {
+            const vm = this;
+            EventBus.$on('show-app-modal', function (options) {
+                if(!vm.visible) {
+                    vm.show(options);
                 }
-            },
-            errorMsg: {
-                type: String,
-                default: 'Oops, an unexpected error occurred :( Please try a next time.'
-            },
+            });
+            EventBus.$on('set-app-modal-state', function (newState) {
+                vm.state = newState;
+            });
+            EventBus.$on('hide-app-modal', function () {
+                if(vm.visible) {
+                    vm.hide();
+                }
+            });
+            vm.element.on('show.bs.modal', function () {
+                vm.visible = true;
+            });
+            vm.element.on('hide.bs.modal', function () {
+                vm.visible = false;
+            });
         },
         methods: {
+            show({title, body, contentId, actionInProgressLabel, errorTitle, errorMessage, state}) {
+                const vm = this;
+                vm.title = title;
+                vm.body = body;
+                vm.contentId = contentId;
+                vm.actionInProgressLabel = actionInProgressLabel;
+                vm.errorTitle = errorTitle;
+                vm.errorMessage = errorMessage;
+                vm.state = state;
+                vm.element.modal(); // display modal on screen
+            },
+            hide() {
+                this.element.modal('hide');
+            },
             onSubmitClicked() {
-                this.$emit('submitClicked', this.contentId);
+                EventBus.$emit('submit-app-modal', this.contentId);
             }
         }
     }

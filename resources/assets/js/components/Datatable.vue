@@ -1,8 +1,8 @@
 <template>
     <div class="card">
         <div class="card-body">
-             <slot></slot>
-            <table id='datatable' class="table" style="border-collapse: collapse !important;">
+            <slot></slot>
+            <table :id="id" class="table" style="border-collapse: collapse !important;">
                 <thead>
                 <tr>
                     <th v-for="column in columns" :key="column.name">{{column.label}}</th>
@@ -10,70 +10,44 @@
                 </tr>
                 </thead>
             </table>
-            <div v-if="initialLoading" class="processing-wrapper">
-                <span class="processing spinner-border text-primary" role="status"></span>
-            </div>
         </div>
-
-        <base-modal
-                :id="modalId"
-                :title="deleteConfirmation.title"
-                :body="modalBody"
-                action-in-progress-label="Deleting..."
-                :content-id="activeRecord.id"
-                :state="modalState"
-                :error-msg="modalErrorMsg"
-                @submitClicked="onDeleteConfirmed"></base-modal>
     </div>
 </template>
 
 <script>
     import * as Vue from "vue";
     import DatatableControls from "./DatatableControls";
-    import BaseModal from "./BaseModal";
 
     export default {
         name: 'Datatable',
-        props: ['columns', 'resource', 'deleteConfirmation'],
-        components: {DatatableControls, BaseModal},
+        props: ['columns', 'resourceUrl'],
+        components: {DatatableControls},
         data() {
             return {
-                initialLoading: false,
-                datatable: {},
-                modalId: 'datatableModal',
-                modalBody: '',
-                modalState: 'pendingAction',
-                modalErrorMsg: '',
+                id: 'datatable',
+                datatable: null,
                 records: [],
-                activeRecord: {},
             }
         },
         mounted() {
             this.bootstrap();
         },
+        computed: {
+          element(){
+              return $(`#${this.id}`);
+          }
+        },
         methods: {
-            // Setup datatable library
+            // Setup datatable library and
             bootstrap() {
                 const vm = this;
-                vm.datatable = $('#datatable').DataTable({
+                vm.$on('refresh', vm.onRefreshRequested);
+                vm.datatable = vm.element.DataTable({
                     processing: true,
                     serverSide: true,
-                    serverMethod: 'post',
-                    /* data: [
-                         {
-                             birth_date: "1984-07-05",
-                             city: "Cloydview",
-                             company_name: "Mraz-Weimann",
-                             email: "laurianne77@example.org",
-                             phone: 'ezaez',
-                             first_name: "Lulu",
-                             id: 37,
-                             last_name: "Lesch",
-                         }
-                     ],
-                     deferLoading: 1,*/
+                    serverMethod: 'POST',
                     ajax: {
-                        url: vm.resource.api,
+                        url: vm.resourceUrl,
                         type: 'GET',
                         dataSrc: function (json) {
                             vm.records = json.data;
@@ -96,115 +70,61 @@
                         searchPlaceholder: "Search",
                         processing: ''
                     },
-                    drawCallback: vm.onRecordsLoaded
+                    drawCallback: vm.onRecordsRefreshed
                 });
             },
 
+            // Callback when datatable refresh is requestedt
+            onRefreshRequested(){
+                this.datatable.draw();
+            },
+
             // Called everytime datatable records get refreshed
-            onRecordsLoaded(settings) {
-                let vm = this;
+            onRecordsRefreshed(settings) {
+                const vm = this;
                 let totalRows = vm.records.length;
                 let lastColumnIndex = settings.aoColumns.filter((column) => column.bVisible).length;
+                vm.$emit('refreshed', vm.records);
                 vm.renderRecordsControls(totalRows, lastColumnIndex);
             },
 
             // Attach an instance of DatableControls to every record
             renderRecordsControls(totalRows, columnIndex) {
-                let vm = this;
-                for (let row = 1; row <= totalRows; row++) {
+                const vm = this;
+                for (let row = 0; row < totalRows; row++) {
+                    // let recordId = vm.records[row - 1].id;
                     new (Vue.extend(DatatableControls))({
                         key: row,
                         parent: vm,
                         propsData: {
-                            row
+                            id: row
                         },
-                        mounted() {
-                            let controlsInstance = this;
-                            vm.attachListenersToRecordControls(controlsInstance);
+                        mounted(){
+                            const controls = this;
+                            vm.bubbleUpControlsEvents(controls);
                         }
-                    }).$mount(`#datatable tbody tr:nth-child(${row}) td:nth-child(${columnIndex}) span`)
+                    }).$mount(`#datatable tbody tr:nth-child(${row + 1}) td:nth-child(${columnIndex}) span`)
                 }
             },
 
-            // Attach listeners to Records Controls
-            attachListenersToRecordControls(controlsInstance) {
-                let vm = this;
-                controlsInstance.$on('deleteClicked', function (row) {
-                    vm.onDeleteClicked(row);
+            // Attach listeners to controls event and emit them again
+            bubbleUpControlsEvents(controls){
+                const vm = this;
+                controls.$on('edit', function (row) {
+                    vm.$emit('edit-record', vm.records[row]);
                 });
-                controlsInstance.$on('editClicked', function (row) {
-                    vm.onEditClicked(row);
+                controls.$on('delete', function (row) {
+                    vm.$emit('delete-record', vm.records[row]);
                 });
-                controlsInstance.$on('showClicked', function (row) {
-                    vm.onShowClicked(row);
+                controls.$on('show', function (row) {
+                    vm.$emit('show-record', vm.records[row]);
                 });
-            },
-
-            // Delete record : handling
-            onDeleteClicked(row) {
-                let vm = this;
-                vm.setActiveRecord(row);
-                vm.setupDeleteConfirmationModal();
-                vm.displayDeleteConfirmationModal()
-            },
-            setupDeleteConfirmationModal() {
-                let vm = this;
-                vm.modalBody = vm.deleteConfirmation.body(vm.activeRecord);
-            },
-            displayDeleteConfirmationModal() {
-                let vm = this;
-                this.modalState = 'pendingAction';
-                $('#' + vm.modalId).modal();
-            },
-            async onDeleteConfirmed(recordId) {
-                let vm = this;
-                try {
-                    vm.modalState = 'actionInProgress';
-                    await vm.resource.delete(recordId);
-                    vm.hideDeleteConfirmationModal();
-                    vm.datatable.draw();
-                } catch (error) {
-                    console.log(error);
-                    if (error.response.status === 404) {
-                        vm.modalErrorMsg = 'Oops someone else has already deleted this contact before...';
-                    }
-                    vm.modalState = 'error';
-                }
-            },
-            hideDeleteConfirmationModal() {
-                let vm = this;
-                $('#' + vm.modalId).modal('hide');
-            },
-
-            // Edit record : handling
-            onEditClicked(row) {
-                let vm = this;
-                vm.setActiveRecord(row);
-                // Handling is delegated to the resource
-                vm.resource.edit(vm.activeRecord.id);
-            },
-
-            // Show record : handling
-            onShowClicked(row) {
-                let vm = this;
-                vm.setActiveRecord(row);
-                // Handling is delegated to the resource
-                vm.resource.show(vm.activeRecord.id);
-            },
-
-            // Helpers
-            setActiveRecord(row) {
-                this.activeRecord = this.records[row - 1];
             }
         }
     }
 </script>
 
 <style>
-
-    .app-header {
-        margin-bottom: 0.7rem;
-    }
 
     h6 {
         margin-bottom: 1rem;
@@ -244,9 +164,13 @@
         padding: 1em 0;
         content: "";
     }
+
     @keyframes spinner-border {
-        to { transform: rotate(360deg); }
+        to {
+            transform: rotate(360deg);
+        }
     }
+
     div.dataTables_wrapper::after {
         display: inline-block;
         width: 70px;
@@ -254,10 +178,10 @@
         vertical-align: text-bottom;
         border: 5px solid currentColor;
         border-right-color: transparent;
-    // stylelint-disable-next-line property-blacklist
-        border-radius: 50%;
+    / / stylelint-disable-next-line property-blacklist border-radius: 50 %;
         animation: spinner-border .75s linear infinite;
     }
+
     #datatable_length > label {
         font-weight: 500;
     }
@@ -270,7 +194,6 @@
     input[type="search"]::placeholder {
         opacity: 0.6;
     }
-
 
     .custom-select {
         height: 2.4rem !important;

@@ -3,6 +3,7 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class Contact extends Model
 {
@@ -76,5 +77,14 @@ class Contact extends Model
     {
         // Set the first letters to uppercase and the rest to lowercase
         $this->attributes['last_name'] = ucwords(strtolower($value));
+    }
+
+    /**
+     * Parse the date to the correct format
+     * @param $value
+     */
+    public function setBirthDateAttribute($value)
+    {
+        $this->attributes['birth_date'] =  Carbon::parse($value);
     }
 }

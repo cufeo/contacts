@@ -1,15 +1,15 @@
 <template>
     <div class="btn-group">
-        <button type="button" class="btn btn-small" @click="onEvent('editClicked')">
+        <button type="button" class="btn btn-small" @click="onEvent('edit')">
             <i class="fas fa-pencil-alt"></i>
         </button>
-        <button type="button" class="btn btn-small" @click="onEvent('deleteClicked')">
+        <button type="button" class="btn btn-small" @click="onEvent('delete')">
             <i class="fas fa-trash-alt"></i>
         </button>
-        <button type="button" class="btn btn-small" @click="onEvent('showClicked')">
+        <button type="button" class="btn btn-small" @click="onEvent('show')">
             <i class="far fa-eye"></i>
         </button>
-        <button type="button" class="btn btn-small" @click="onEvent('streetViewClicked')">
+        <button type="button" class="btn btn-small" @click="onEvent('show')">
             <i class="fas fa-street-view"></i>
         </button>
     </div>
@@ -19,10 +19,10 @@
 <script>
     export default {
         name: 'DatatableControls',
-        props: ['row'],
+        props: ['id'],
         methods: {
             onEvent(name) {
-                this.$emit(name, this.row);
+                this.$emit(name, this.id);
             }
         }
     }

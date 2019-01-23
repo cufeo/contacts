@@ -14,7 +14,6 @@ try {
     require('vue-router');
     require('bootstrap');
     require('datatables.net-bs4');
-    require('bootstrap-datepicker');
 
 } catch (e) {
 }

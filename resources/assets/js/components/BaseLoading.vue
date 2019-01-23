@@ -10,35 +10,22 @@
 </template>
 
 <script>
-    import {EventBus} from "../utils/events-bus";
+    import {EventBus} from "../utils/event-bus";
 
     export default {
         name: "BaseLoading",
         data() {
             return {
-                callers: 0,
-            }
-        },
-        computed: {
-            visible() {
-                return this.callers > 0;
-            }
-        },
-        methods: {
-            attachCaller() {
-                this.callers++;
-            },
-            detachCaller() {
-                this.callers > 0 ? this.callers-- : 0;
+                visible: false,
             }
         },
         created() {
-            let vm = this;
-            EventBus.$on('loadingCalled', function () {
-                vm.attachCaller();
+            const vm = this;
+            EventBus.$on('show-app-loading', function () {
+                vm.visible = true;
             });
-            EventBus.$on('loadingHanged', function () {
-                vm.detachCaller();
+            EventBus.$on('hide-app-loading', function () {
+                vm.visible = false;
             });
         }
     }

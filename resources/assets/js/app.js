@@ -52,5 +52,8 @@ const app = new Vue({
     components: {
         App
     },
+    data : {
+      contactsCache: []
+    },
     router
 });

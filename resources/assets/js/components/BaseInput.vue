@@ -15,21 +15,24 @@
 </template>
 
 <script>
+    import {capitlize} from "../utils/string-capitalizer";
+
     export default {
         name: 'BaseInput',
-        props: ['id','label' ,'type', 'value','errors'],
+        props: ['id', 'label', 'type', 'value', 'errors', 'capitalize'],
         methods: {
             input(event) {
-                this.$emit('input', event.target.value);
+                let newVal = event.target.value;
+                this.$emit('input', this.capitalize ? capitlize(newVal) : newVal);
             },
         },
         computed: {
             // Setup transparent wrapper component implementation
             listeners() {
-                const { input, ...listeners } = this.$listeners;
+                const {input, ...listeners} = this.$listeners;
                 return listeners;
             },
-        },
+        }
     }
 </script>
 

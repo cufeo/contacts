@@ -21,7 +21,7 @@
                             data-dismiss="modal">Cancel
                     </button>
 
-                    <button v-if="state === 'pendingAction'" type="button" class="btn btn-danger"
+                    <button v-if="state === 'pendingConfirmation'" type="button" class="btn btn-danger"
                             @click="onSubmitClicked">
                         Confirm
                     </button>
@@ -40,67 +40,35 @@
 </template>
 
 <script>
-    import {EventBus} from "../utils/event-bus";
-
     export default {
         name: "BaseModal",
-        data() {
-            return {
-                id: 'app-modal',
-                title: null,
-                body: null,
-                contentId: null,
-                actionInProgressLabel: null,
-                errorTitle: 'Something went wrong :(',
-                errorMessage: 'Oops, an unexpected error occurred :( Please try a next time.',
-                state: 'pendingAction', // Accept: 'pendingAction', 'actionInProgress', 'error', 'success',
-                visible: false,
+        props: ['id', 'title', 'body', 'actionInProgressLabel', 'errorTitle', 'errorMessage', 'state'],
+        computed: {
+            element() {
+                return $(`#${this.id}`);
             }
         },
-        computed: {
-          element() {
-              return $(`#${this.id}`);
-          }
-        },
-        mounted() {
-            const vm = this;
-            EventBus.$on('show-app-modal', function (options) {
-                if(!vm.visible) {
-                    vm.show(options);
+        watch: {
+            state(value) {
+                switch (value) {
+                    case 'hidden':
+                        this.element.modal('hide');
+                        break;
+                    case 'pendingConfirmation':
+                        this.element.modal('show');
+                        break;
+                    case 'actionInProgress':
+                    case 'success':
+                    case 'error':
+                        break;
+                    default:
+                        throw `[BaseModal]: Unknown value "${value}" passed to state property`;
                 }
-            });
-            EventBus.$on('set-app-modal-state', function (newState) {
-                vm.state = newState;
-            });
-            EventBus.$on('hide-app-modal', function () {
-                if(vm.visible) {
-                    vm.hide();
-                }
-            });
-            vm.element.on('show.bs.modal', function () {
-                vm.visible = true;
-            });
-            vm.element.on('hide.bs.modal', function () {
-                vm.visible = false;
-            });
+            }
         },
         methods: {
-            show({title, body, contentId, actionInProgressLabel, errorTitle, errorMessage, state}) {
-                const vm = this;
-                vm.title = title;
-                vm.body = body;
-                vm.contentId = contentId;
-                vm.actionInProgressLabel = actionInProgressLabel;
-                vm.errorTitle = errorTitle;
-                vm.errorMessage = errorMessage;
-                vm.state = state;
-                vm.element.modal(); // display modal on screen
-            },
-            hide() {
-                this.element.modal('hide');
-            },
             onSubmitClicked() {
-                EventBus.$emit('submit-app-modal', this.contentId);
+                this.$emit('submit');
             }
         }
     }

@@ -1,5 +1,5 @@
 <template>
-    <div class="app-loading" v-if="visible">
+    <div class="app-loading" v-if="show">
         <div class="app-spinner-wrapper">
             <div class="spinner-border text-primary app-spinner" role="status">
                 <span class="sr-only">Loading...</span>
@@ -10,24 +10,9 @@
 </template>
 
 <script>
-    import {EventBus} from "../utils/event-bus";
-
     export default {
-        name: "BaseLoading",
-        data() {
-            return {
-                visible: false,
-            }
-        },
-        created() {
-            const vm = this;
-            EventBus.$on('show-app-loading', function () {
-                vm.visible = true;
-            });
-            EventBus.$on('hide-app-loading', function () {
-                vm.visible = false;
-            });
-        }
+        name: 'BaseLoading',
+        props: ['show']
     }
 </script>
 

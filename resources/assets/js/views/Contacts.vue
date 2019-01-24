@@ -6,8 +6,7 @@
                 :resource-url="apiUrl"
                 @show-record="onShowContactClicked"
                 @delete-record="onDeleteContactClicked"
-                @edit-record="onEditContactClicked"
-                @refreshed="onContactsRefreshed">
+                @edit-record="onEditContactClicked">
             <div class="row justify-content-between app-header">
                 <h6 class="col"><strong>List Of Contacts</strong></h6>
                 <div class="col text-right app-add-btn">
@@ -17,6 +16,15 @@
                 </div>
             </div>
         </datatable>
+        <!-- Modal for obtaining confirmation to delete the contact-->
+        <base-modal id="datatable-modal"
+                    title="Delete Contact"
+                    :body="modalBody"
+                    action-in-progress-label="Deleting..."
+                    error-title="Ooops something went wrong :("
+                    error-message="Please reload the page and try again."
+                    :state="modalState"
+                    @submit="onDeleteContactConfirmed"></base-modal>
     </div>
 
 </template>
@@ -24,14 +32,13 @@
 <script>
     import Datatable from "../components/Datatable";
     import {ContactsApi} from "../utils/contacts-api";
-    import {EventBus} from "../utils/event-bus";
+    import BaseModal from "../components/BaseModal";
 
     export default {
-        components: {Datatable},
-        props: ['initialContacts'],
+        components: {Datatable, BaseModal},
         data() {
             return {
-                contacts: [],
+                // For Datatable component
                 columns: [
                     {label: 'ID #', name: 'id'},
                     {label: 'BIRTH DATE', name: 'birth_date'},
@@ -40,55 +47,47 @@
                     {label: 'EMAIL', name: 'email'},
                     {label: 'PHONE NUMBER', name: 'phone'},
                     {label: 'COMPANY', name: 'company_name'},
-                    {label: null, name: 'last_name'}, // not visible
-                    {label: null, name: 'function'}, // not visible
-                    {label: null, name: 'company_address'}, // not visible,
+                    {label: null, name: 'last_name'}, // not displayed, for caching only
+                    {label: null, name: 'function'}, // not displayed, for caching only
+                    {label: null, name: 'company_address'}, // not displayed, for caching only
                 ],
                 apiUrl: 'api/contacts',
-                deleteConfirmationMessage: {
-                    title: 'Delete Contact',
-                    body: (contact) => `Are you sure you want to delete this contact: ${contact['first_name']} ${contact['last_name']} (${contact['email']}) ?`
-                },
+
+                // For modal component
+                modalContact: null,
+                modalState: 'hidden'
+            }
+        }, computed: {
+            modalBody() {
+                return this.modalContact ? `Are you sure you want to delete this contact: ${this.modalContact['first_name']} ${this.modalContact['last_name']} (${this.modalContact['email']}) ?` : '';
             }
         },
         methods: {
             onShowContactClicked(contact) {
-                this.$router.push({name: 'contactShow', params: {id: contact.id, cachedContact: contact}});
+                this.$router.push({name: 'contactShow', params: {id: contact.id, contact: contact}});
             },
             onEditContactClicked(contact) {
-                this.$router.push({name: 'contactShow', params: {id: contact.id, cachedContact: contact}});
+                this.$router.push({name: 'contactShow', params: {id: contact.id, contact: contact}});
             },
             onDeleteContactClicked(contact) {
-                const vm = this;
-                EventBus.$on('submit-app-modal', vm.onDeleteContactConfirmed);
-                EventBus.$emit('show-app-modal', {
-                    title: vm.deleteConfirmationMessage.title,
-                    body: vm.deleteConfirmationMessage.body(contact),
-                    contentId: contact.id,
-                    actionInProgressLabel: 'Deleting...',
-                    errorTitle: 'Ooops something went wrong :(',
-                    errorMessage: 'Please reload the page and try again.',
-                    state: 'pendingAction',
-                });
+                this.modalContact = contact;
+                this.modalState = 'pendingConfirmation';
             },
-            async onDeleteContactConfirmed(contactId) {
+            async onDeleteContactConfirmed() {
                 const vm = this;
-                EventBus.$emit('set-app-modal-state', 'actionInProgress');
+                this.modalState = 'actionInProgress';
                 try {
-                    await ContactsApi.delete(contactId);
-                    EventBus.$emit('hide-app-modal');
+                    await ContactsApi.delete(vm.modalContact.id);
+                    this.modalState = 'hidden';
                     this.$refs.datatable.$emit('refresh');
                 } catch (error) {
-                    EventBus.$emit('set-app-modal-state', 'error');
+                    console.log(error.response);
+                    this.modalState = 'error';
                 }
             },
             onAddContactClicked() {
                 this.$router.push({name: 'contactCreate'});
-            },
-            onContactsRefreshed(contacts){
-                EventBus.$data.contactsCache = contacts;
             }
-
         }
     }
 </script>
@@ -96,6 +95,7 @@
     .app-add-btn {
         margin-bottom: 1rem;
     }
+
     .app-datatable-container {
         padding-top: 1rem;
         padding-bottom: 1rem;

@@ -27,6 +27,7 @@
                 id: 'datatable',
                 datatable: null,
                 records: [],
+                controls: [],
             }
         },
         mounted() {
@@ -76,7 +77,7 @@
 
             // Callback when datatable refresh is requestedt
             onRefreshRequested(){
-                this.datatable.draw();
+               this.datatable.draw();
             },
 
             // Called everytime datatable records get refreshed
@@ -91,9 +92,15 @@
             // Attach an instance of DatableControls to every record
             renderRecordsControls(totalRows, columnIndex) {
                 const vm = this;
+                // Destroy old controls
+                vm.controls.forEach((control)=> {
+                    control.$off();
+                    control.$destroy();
+                });
+                // vm.controlsListeners.forEach((control) => control.$off());
                 for (let row = 0; row < totalRows; row++) {
                     // let recordId = vm.records[row - 1].id;
-                    new (Vue.extend(DatatableControls))({
+                    let control = new (Vue.extend(DatatableControls))({
                         key: row,
                         parent: vm,
                         propsData: {
@@ -103,23 +110,24 @@
                             const controls = this;
                             vm.bubbleUpControlsEvents(controls);
                         }
-                    }).$mount(`#datatable tbody tr:nth-child(${row + 1}) td:nth-child(${columnIndex}) span`)
+                    }).$mount(`#datatable tbody tr:nth-child(${row + 1}) td:nth-child(${columnIndex}) span`);
+                    vm.controls.push(control);
                 }
             },
 
             // Attach listeners to controls event and emit them again
             bubbleUpControlsEvents(controls){
                 const vm = this;
-                controls.$on('edit', function (row) {
-                    vm.$emit('edit-record', vm.records[row]);
-                });
                 controls.$on('delete', function (row) {
                     vm.$emit('delete-record', vm.records[row]);
+                });
+                controls.$on('edit', function (row) {
+                    vm.$emit('edit-record', vm.records[row]);
                 });
                 controls.$on('show', function (row) {
                     vm.$emit('show-record', vm.records[row]);
                 });
-            }
+            },
         }
     }
 </script>

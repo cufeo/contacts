@@ -9,22 +9,22 @@
                 <div class="col">
                     <div class="card border-top-2">
                         <div class="card-body">
-                            <base-input id="email" label="Email Address*" v-model="contact.email" :errors="getErrors('email')"></base-input>
-                            <base-input id="first_name" label="First Name*" v-model="contact.first_name" :errors="getErrors('first_name')"></base-input>
-                            <base-input id="last_name" label="Last Name*" v-model="contact.last_name" :errors="getErrors('last_name')"></base-input>
+                            <base-input id="email" type="email" label="Email Address*" v-model="contact.email" :errors="getErrors('email')"></base-input>
+                            <base-input id="first_name" type="text" label="First Name*" capitalize="true" v-model="contact.first_name" :errors="getErrors('first_name')"></base-input>
+                            <base-input id="last_name" type="text" label="Last Name*" capitalize="true" v-model="contact.last_name" :errors="getErrors('last_name')"></base-input>
                             <div class="form-group">
                                 <label>Birth Date</label>
                                 <datepicker input-class="form-control bg-white" calendar-button-icon="far fa-calendar" :bootstrap-styling="true"
                                             v-model="contact.birth_date" name="birth_date"
-                                            :format="formatBirthDate">
+                                            format="yyyy-MM-dd">
                                     <div slot="afterDateInput" class="input-group-append">
                                         <div class="input-group-text far fa-calendar"></div>
                                     </div>
                                 </datepicker>
                             </div>
-                            <base-input id="city" label="City" v-model="contact.city" :errors="getErrors('city')"></base-input>
-                            <base-input id="phone" label="Phone Number*" v-model="contact.phone" :errors="getErrors('phone')"></base-input>
-                            <base-input id="function" label="Function" v-model="contact.function" :errors="getErrors('function')"></base-input>
+                            <base-input id="city" type="text" label="City" v-model="contact.city" :errors="getErrors('city')"></base-input>
+                            <base-input id="phone" type="text" label="Phone Number*" v-model="contact.phone" :errors="getErrors('phone')"></base-input>
+                            <base-input id="function" type="text" label="Function" v-model="contact.function" :errors="getErrors('function')"></base-input>
                             <p>
                                 * Required Fields
                             </p>
@@ -40,8 +40,8 @@
                     <div class="card">
                         <div class="card-body">
                             <h5 class="card-title mb-4 app-company-title">Company</h5>
-                            <base-input id="company_name" label="Name" v-model="contact.company_name" :errors="getErrors('company_name')"></base-input>
-                            <base-input id="company_address" label="Address" v-model="contact.company_address" :errors="getErrors('company_address')"></base-input>
+                            <base-input type="text" id="company_name" label="Name" v-model="contact.company_name" :errors="getErrors('company_name')"></base-input>
+                            <base-input type="text" id="company_address" label="Address" v-model="contact.company_address" :errors="getErrors('company_address')"></base-input>
                         </div>
                         <div class="card-footer pb-5">
                         </div>
@@ -49,43 +49,39 @@
                 </div>
             </div>
         </div>
+        <base-loading :show="loading"></base-loading>
     </div>
 </template>
 
 <script>
     import {ContactsApi} from "../utils/contacts-api";
-    import {EventBus} from "../utils/event-bus";
     import BaseFormSubmit from "../components/BaseFormSubmit";
     import Datepicker from "vuejs-datepicker";
-    import * as moment from 'moment';
-    import {capitlize} from "../utils/string-capitalizer";
     import BaseInput from "../components/BaseInput";
+    import BaseLoading from "../components/BaseLoading";
 
     export default {
         name: 'Contact',
         props: ['mode'],
-        components: {BaseFormSubmit, Datepicker, BaseInput},
+        components: {BaseFormSubmit, Datepicker, BaseInput, BaseLoading},
         data() {
             return {
                 contact: {},
-                state: 'pendingAction', // either: 'pendingAction', 'actionInProgress', 'success', 'error'
+                loading: false,
                 errors: null
             }
         },
         async beforeRouteEnter(to, from, next) {
             let contactId = to.params.id;
-            let cachedContact = to.params.cachedContact;
-            if (cachedContact) {
-                next(vm => vm.contact = cachedContact);
+            let contact = to.params.contact;
+            if (contact) {
+                next(vm => vm.contact = contact);
             } else if (contactId) {
                 try {
-                    EventBus.$emit('show-app-loading');
                     let contact = (await ContactsApi.get(contactId)).data;
                     next(vm => vm.contact = contact);
                 } catch (error) {
                     next(vm => vm.onDataFetchingError(error.response));
-                } finally {
-                    EventBus.$emit('hide-app-loading');
                 }
             } else {
                 next();
@@ -95,38 +91,21 @@
             this.contact = null;
             this.error = null;
             let contactId = to.params.id;
-            let cachedContact = to.params.cachedContact;
-            if (cachedContact) {
-                next(vm => vm.contact = cachedContact);
+            let contact = to.params.contact;
+            if (contact) {
+                next(vm => vm.contact = contact);
             } else if (contactId) {
                 try {
-                    EventBus.$emit('show-app-loading');
+                    this.loading = true;
                     let contact = (await ContactsApi.get(contactId)).data;
                     next(vm => vm.contact = contact);
                 } catch (error) {
                     next(vm => vm.onDataFetchingError(error.response));
                 } finally {
-                    EventBus.$emit('hide-app-loading');
+                    this.loading = false;
                 }
             } else {
                 next();
-            }
-        },
-        computed: {
-            firstName() {
-                return this.contact.first_name;
-            },
-            lastName() {
-                return this.contact.last_name;
-            }
-
-        },
-        watch: {
-            firstName(newVal) {
-                this.contact.first_name = capitlize(newVal);
-            },
-            lastName(newVal) {
-                this.contact.last_name = capitlize(newVal);
             }
         },
         methods: {
@@ -144,25 +123,25 @@
             },
             async updateContact() {
                 try {
-                    EventBus.$emit('show-app-loading');
+                    this.loading = true;
                     await ContactsApi.update(this.contact);
                     this.onDataSavingSuccess();
                 } catch (error) {
                     this.onDataSavingError(error.response);
                 } finally {
-                    EventBus.$emit('hide-app-loading');
+                    this.loading = false;
                 }
 
             },
             async createContact() {
                 try {
-                    EventBus.$emit('show-app-loading');
+                    this.loading = true;
                     await ContactsApi.create(this.contact);
                     this.onDataSavingSuccess();
                 } catch (error) {
                     this.onDataSavingError(error.response);
                 } finally {
-                    EventBus.$emit('hide-app-loading');
+                    this.loading = false;
 
                 }
             },
@@ -173,9 +152,6 @@
                 this.errors = error.data;
             },
             onDataFetchingError(error) {
-            },
-            formatBirthDate(date) {
-                return moment(date).format("YYYY-MM-DD").toString();
             },
             // Helpers
             getErrors(field) {
